@@ -96,9 +96,15 @@
       </div>
     </main>
   </div>
+  <!-- Add GPT-3 Encoder script for accurate token counting -->
+  <script src="gpt-3-encoder.min.js"></script>
   <script>
     // --- JavaScript for new layout and chat history ---
     function countTokens(text) {
+      if (window.encode) {
+        return encode(text).length;
+      }
+      // fallback: word count
       return text.split(/\s+/).length;
     }
 
@@ -152,12 +158,10 @@
 
       // Token count update
       function updateTokenCount() {
-        if (providerSelect.value === 'openai') {
-          tokenCount.textContent = `Token count: ${countTokens(promptInput.value)}`;
-          tokenCount.classList.remove('hidden');
-        } else {
-          tokenCount.classList.add('hidden');
-        }
+        let approx = '';
+        if (!window.encode) approx = ' (approximate)';
+        tokenCount.textContent = `Token count${approx}: ${countTokens(promptInput.value)}`;
+        tokenCount.classList.remove('hidden');
       }
       promptInput.addEventListener('input', updateTokenCount);
       providerSelect.addEventListener('change', updateTokenCount);
