@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Universal LLM Prompt Tool</title>
+  <!-- Tailwind CDN: use the official Play CDN for best compatibility -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Optionally, configure Tailwind theme here if needed
+    // tailwind.config = { ... }
+  </script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-white to-indigo-100 min-h-screen font-sans">
+  <div class="w-full min-h-screen flex flex-col lg:flex-row">
+    <!-- Sidebar: LLM Config -->
+    <aside class="w-full lg:w-1/3 xl:w-1/4 bg-white/90 backdrop-blur-md border-r border-indigo-100 shadow-2xl flex flex-col p-6 gap-8 z-10 lg:sticky lg:top-0 lg:h-screen" style="height:100vh;max-height:100vh;">
+      <div>
+        <h1 class="text-2xl font-extrabold text-indigo-700 mb-6 tracking-tight drop-shadow-sm flex items-center gap-2">
+          <svg class="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M6.05 17.95l-1.414 1.414m12.728 0l-1.414-1.414M6.05 6.05L4.636 4.636"/></svg>
+          Universal LLM Prompt Tool
+        </h1>
+        <!-- Settings Group: Collapsible -->
+        <div id="settingsGroup" class="mb-2">
+          <div id="settingsHeader" class="flex items-center justify-between bg-indigo-100 rounded-xl px-4 py-2 cursor-pointer select-none">
+            <span class="font-bold text-indigo-700 flex items-center gap-2">
+              <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              Settings
+            </span>
+            <svg id="settingsArrow" class="w-4 h-4 ml-2 text-indigo-400 transition-transform" style="transform: rotate(0deg);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <form id="llmConfigForm" class="space-y-6 mt-2 hidden">
+            <div>
+              <label class="block font-semibold mb-1 text-gray-700" for="provider">
+                LLM Provider
+                <span class="ml-1 cursor-pointer text-indigo-400" data-tooltip="Choose your LLM provider (OpenAI, Gemini, OpenRouter)">ⓘ</span>
+              </label>
+              <select id="provider" class="w-full rounded-xl border-gray-200 shadow focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition text-gray-700" required>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold mb-1 text-gray-700" for="model">
+                Model Name
+                <span class="ml-1 cursor-pointer text-indigo-400" data-tooltip="e.g. gpt-3.5-turbo, gemini-pro, openrouter/llama-2-70b">ⓘ</span>
+              </label>
+              <input id="model" type="text" class="w-full rounded-xl border-gray-200 shadow focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition text-gray-700 placeholder-gray-400" placeholder="e.g. gpt-3.5-turbo" required />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1 text-gray-700" for="apiKey">
+                API Key
+                <span class="ml-1 cursor-pointer text-indigo-400" data-tooltip="Your secret API key. Stored locally.">ⓘ</span>
+              </label>
+              <input id="apiKey" type="password" class="w-full rounded-xl border-gray-200 shadow focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition text-gray-700 placeholder-gray-400" placeholder="sk-... or ..." required autocomplete="off" />
+            </div>
+            <button id="newChatBtn" type="button" class="w-full bg-gradient-to-r from-indigo-400 to-blue-400 hover:from-indigo-500 hover:to-blue-500 text-white font-bold py-2 rounded-xl shadow-lg transition flex items-center gap-2 justify-center mt-4">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg> New Chat
+            </button>
+          </form>
+        </div>
+        <!-- Chat History: Use all remaining vertical space -->
+        <div class="flex-1 flex flex-col min-h-0">
+          <h2 class="font-bold text-indigo-600 mb-3 text-lg flex items-center gap-2"><svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V10a2 2 0 012-2h2"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 3h-6a2 2 0 00-2 2v0a2 2 0 002 2h6a2 2 0 002-2v0a2 2 0 00-2-2z"></path></svg>Chat History</h2>
+          <ul id="chatHistory" class="space-y-2 flex-1 min-h-0 overflow-y-auto pr-2"></ul>
+        </div>
+        <footer class="text-center text-xs text-gray-400 mt-8">Built with <span class="text-indigo-400 font-bold">Tailwind CSS</span> &amp; <span class="text-blue-400 font-bold">Vanilla JS</span> · 2025</footer>
+      </div>
+    </aside>
+    <!-- Chat section -->
+    <main class="flex-1 flex flex-col min-h-screen p-0 lg:p-12 bg-gradient-to-br from-indigo-50 to-blue-50">
+      <div class="max-w-3xl mx-auto w-full flex flex-col h-full min-h-screen">
+        <!-- Chat area and prompt input: prompt always visible at bottom -->
+        <div class="flex flex-col flex-1 min-h-0">
+          <div id="chatArea" class="flex-1 flex flex-col gap-4 overflow-y-auto py-6 min-h-0" style="scroll-behavior:smooth;">
+            <!-- Chat messages will be appended here -->
+          </div>
+          <!-- Prompt input -->
+          <form id="promptForm" class="bg-white/90 backdrop-blur-xl border border-indigo-100 shadow-xl rounded-xl p-6 mt-2 flex flex-col gap-2 sticky bottom-0 z-10">
+            <div class="flex items-center gap-2">
+              <label for="prompt" class="font-semibold text-gray-700 flex items-center gap-1">Prompt
+                <span class="ml-1 cursor-pointer text-indigo-400" data-tooltip="Enter your prompt here. Try: 'Summarize this text...'">ⓘ</span>
+              </label>
+              <div class="text-xs text-indigo-500 font-mono ml-auto" id="tokenCount"></div>
+            </div>
+            <textarea id="prompt" rows="2" class="w-full rounded-xl border-gray-200 shadow focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition text-gray-700 placeholder-gray-400 resize-y" placeholder="Write your prompt here..." required></textarea>
+            <div class="flex items-center justify-between mt-1">
+              <button id="submitBtn" type="submit" class="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-bold px-8 py-2 rounded-xl shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                Send
+              </button>
+              <div id="errorBox" class="text-red-500 text-sm font-medium"></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    // --- JavaScript for new layout and chat history ---
+    function countTokens(text) {
+      return text.split(/\s+/).length;
+    }
+
+    // Chat history persistence
+    function saveChatHistory(history) {
+      localStorage.setItem('llm_chat_history', JSON.stringify(history));
+    }
+    function loadChatHistory() {
+      try {
+        return JSON.parse(localStorage.getItem('llm_chat_history')) || [];
+      } catch { return []; }
+    }
+
+    // --- Chat session model ---
+    // Each session: {id, provider, model, apiKey, messages: [{prompt, response, ts}], created, lastActive}
+    function makeSessionId(provider, model, apiKey) {
+      // Use a hash or simple join for now
+      return btoa(unescape(encodeURIComponent(`${provider}||${model}||${apiKey}`)));
+    }
+    function saveSessions(sessions) {
+      localStorage.setItem('llm_sessions', JSON.stringify(sessions));
+    }
+    function loadSessions() {
+      try {
+        return JSON.parse(localStorage.getItem('llm_sessions')) || [];
+      } catch { return []; }
+    }
+
+    let sessions = loadSessions();
+    let activeSessionId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Elements
+      const providerSelect = document.getElementById('provider');
+      const modelInput = document.getElementById('model');
+      const apiKeyInput = document.getElementById('apiKey');
+      const promptInput = document.getElementById('prompt');
+      const submitBtn = document.getElementById('submitBtn');
+      const errorBox = document.getElementById('errorBox');
+      const tokenCount = document.getElementById('tokenCount');
+      const chatArea = document.getElementById('chatArea');
+      const chatHistoryList = document.getElementById('chatHistory');
+      const promptForm = document.getElementById('promptForm');
+      const llmConfigForm = document.getElementById('llmConfigForm');
+      const newChatBtn = document.getElementById('newChatBtn');
+
+      // Load last used model and key
+      modelInput.value = localStorage.getItem('llm_model') || '';
+      apiKeyInput.value = localStorage.getItem('llm_key') || '';
+      providerSelect.value = localStorage.getItem('llm_provider') || 'openai';
+
+      // Token count update
+      function updateTokenCount() {
+        if (providerSelect.value === 'openai') {
+          tokenCount.textContent = `Token count: ${countTokens(promptInput.value)}`;
+          tokenCount.classList.remove('hidden');
+        } else {
+          tokenCount.classList.add('hidden');
+        }
+      }
+      promptInput.addEventListener('input', updateTokenCount);
+      providerSelect.addEventListener('change', updateTokenCount);
+      updateTokenCount();
+
+      // Tooltips
+      document.querySelectorAll('[data-tooltip]').forEach(el => {
+        el.addEventListener('mouseenter', function() {
+          let tooltip = document.createElement('div');
+          tooltip.className = 'absolute z-20 bg-gray-700 text-white text-xs rounded px-2 py-1 mt-1';
+          tooltip.textContent = el.getAttribute('data-tooltip');
+          tooltip.style.left = el.getBoundingClientRect().left + 'px';
+          tooltip.style.top = (el.getBoundingClientRect().top + window.scrollY + 24) + 'px';
+          tooltip.setAttribute('id', 'active-tooltip');
+          document.body.appendChild(tooltip);
+        });
+        el.addEventListener('mouseleave', function() {
+          let t = document.getElementById('active-tooltip');
+          if (t) t.remove();
+        });
+      });
+
+      // --- Settings group collapsible logic ---
+      const settingsHeader = document.getElementById('settingsHeader');
+      const settingsArrow = document.getElementById('settingsArrow');
+      // Default collapsed
+      llmConfigForm.classList.add('hidden');
+      settingsArrow.style.transform = 'rotate(0deg)';
+      settingsHeader.onclick = () => {
+        if (llmConfigForm.classList.contains('hidden')) {
+          llmConfigForm.classList.remove('hidden');
+          settingsArrow.style.transform = 'rotate(90deg)';
+        } else {
+          llmConfigForm.classList.add('hidden');
+          settingsArrow.style.transform = 'rotate(0deg)';
+        }
+      };
+
+      newChatBtn.onclick = () => {
+        // Create new session with current config
+        const provider = providerSelect.value;
+        const model = modelInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
+        if (!provider || !model || !apiKey) {
+          alert('Please fill in provider, model, and API key to start a new chat.');
+          return;
+        }
+        const sessionId = makeSessionId(provider, model, apiKey + Date.now());
+        const newSession = {
+          id: sessionId,
+          provider,
+          model,
+          apiKey,
+          messages: [],
+          created: Date.now(),
+          lastActive: Date.now()
+        };
+        sessions.push(newSession);
+        saveSessions(sessions);
+        activeSessionId = sessionId;
+        renderSessionHistory();
+        renderChat([]);
+        // Autofocus prompt on new chat
+        setTimeout(() => { promptInput.focus(); }, 100);
+      };
+
+      // --- Usability enhancements ---
+      // 1. Autofocus prompt textarea on new chat (already handled above)
+      // 2. Show active chat with highlight and scroll into view
+      function renderSessionHistory() {
+        chatHistoryList.innerHTML = '';
+        if (sessions.length === 0) {
+          chatHistoryList.innerHTML = '<li class="text-gray-400 text-xs">No chats yet.</li>';
+          return;
+        }
+        // Group by provider/model
+        const groups = {};
+        sessions.forEach(s => {
+          const key = `${s.provider}||${s.model}`;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(s);
+        });
+        Object.entries(groups).forEach(([key, sessArr], groupIdx) => {
+          const [provider, model] = key.split('||');
+          const groupId = `group-${groupIdx}`;
+          const groupHeader = document.createElement('div');
+          groupHeader.className = 'font-bold text-indigo-700 flex items-center gap-2 cursor-pointer select-none py-1';
+          groupHeader.innerHTML = `<svg class="w-4 h-4 mr-1 transition-transform" data-arrow style="transform: rotate(90deg);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg> <span>${provider.toUpperCase()}</span> <span class='text-indigo-400 font-normal'>${model}</span>`;
+          groupHeader.onclick = function() {
+            const content = document.getElementById(groupId);
+            const arrow = this.querySelector('[data-arrow]');
+            if (content.classList.contains('hidden')) {
+              content.classList.remove('hidden');
+              arrow.style.transform = 'rotate(90deg)';
+            } else {
+              content.classList.add('hidden');
+              arrow.style.transform = 'rotate(0deg)';
+            }
+          };
+          chatHistoryList.appendChild(groupHeader);
+          // Group content
+          const groupContent = document.createElement('ul');
+          groupContent.id = groupId;
+          groupContent.className = 'space-y-2 mb-2 ml-6';
+          sessArr.slice().reverse().forEach(session => {
+            const li = document.createElement('li');
+            li.className = `relative cursor-pointer bg-indigo-50 hover:bg-indigo-100 rounded p-2 transition border border-indigo-100 ${session.id===activeSessionId?'ring-2 ring-indigo-400':''}`;
+            li.innerHTML = `<div class='truncate text-xs text-indigo-700 font-bold'>Chat started ${new Date(session.created).toLocaleString()}</div><div class='truncate text-gray-500 text-xs'>${session.messages.length} messages</div>`;
+            // Delete button (top right)
+            const delBtn = document.createElement('button');
+            delBtn.className = 'absolute top-1 right-2 text-red-400 hover:text-red-600 text-xs font-bold px-1 rounded focus:outline-none';
+            delBtn.title = 'Delete chat';
+            delBtn.innerHTML = '&times;';
+            delBtn.onclick = (ev) => {
+              ev.stopPropagation();
+              if (confirm('Delete this chat?')) {
+                const idx = sessions.findIndex(s => s.id === session.id);
+                if (idx !== -1) {
+                  sessions.splice(idx, 1);
+                  saveSessions(sessions);
+                  // If deleted chat was active, switch to most recent or show empty
+                  if (activeSessionId === session.id) {
+                    if (sessions.length) {
+                      let last = sessions.reduce((a,b)=>a.lastActive>b.lastActive?a:b);
+                      activeSessionId = last.id;
+                      renderChat(last.messages);
+                    } else {
+                      activeSessionId = null;
+                      chatArea.innerHTML = '<div class="text-gray-400 text-center mt-8">No conversation yet.</div>';
+                    }
+                  }
+                  renderSessionHistory();
+                }
+              }
+            };
+            li.appendChild(delBtn);
+            li.onclick = (e) => {
+              e.stopPropagation();
+              activeSessionId = session.id;
+              renderSessionHistory();
+              renderChat(session.messages);
+            };
+            groupContent.appendChild(li);
+          });
+          chatHistoryList.appendChild(groupContent);
+        });
+        // After rendering, scroll active chat into view
+        setTimeout(() => {
+          const activeLi = chatHistoryList.querySelector('.ring-2');
+          if (activeLi) activeLi.scrollIntoView({block:'nearest', behavior:'smooth'});
+        }, 50);
+      }
+
+      // --- Image generation detection ---
+      function isImagePrompt(prompt, provider, model) {
+        // Basic detection: keywords or model name
+        const imgKeywords = [
+          'draw', 'generate an image', 'picture of', 'create an image', 'image of', 'photo of', 'paint', 'sketch', 'illustrate', 'show me an image', 'dalle', 'dall-e', 'image', 'art', 'visual', 'render', 'stable diffusion', 'sdxl', 'midjourney', 'dream', 'generate a picture', 'make an image'
+        ];
+        // Defensive: ensure model is a string
+        const modelLower = (typeof model === 'string' ? model : '').toLowerCase();
+        if (modelLower.includes('dall') || modelLower.includes('image') || modelLower.includes('sdxl') || modelLower.includes('diffusion') || modelLower.includes('midjourney')) return true;
+        return imgKeywords.some(k => (prompt || '').toLowerCase().includes(k));
+      }
+
+      // --- Render chat with image support ---
+      function renderChat(msgs) {
+        chatArea.innerHTML = '';
+        if (!Array.isArray(msgs) || msgs.length === 0) {
+          chatArea.innerHTML = '<div class="text-gray-400 text-center mt-8">No conversation selected.<br><span class="text-xs text-indigo-400">Start a new chat or select from history.</span></div>';
+          return;
+        }
+        msgs.forEach(item => {
+          const userMsg = document.createElement('div');
+          userMsg.className = 'flex mb-2';
+          userMsg.innerHTML = `<div class='bg-indigo-100 text-indigo-900 rounded-xl px-4 py-2 max-w-[80%] ml-auto shadow font-semibold'>${escapeHTML(item.prompt)}</div>`;
+          chatArea.appendChild(userMsg);
+          const botMsg = document.createElement('div');
+          botMsg.className = 'flex mb-4';
+          // Check if response is an image URL or base64
+          let resp = item.response || '';
+          let imgMatch = resp.match(/(https?:\/\/(?:[\w.-]+)\/(?:[\w\/-]+)\.(?:png|jpg|jpeg|gif|webp|svg))/i);
+          let isLikelyImage = isImagePrompt(item.prompt, item.provider, item.model) || (imgMatch && imgMatch[1]);
+          if (isLikelyImage && imgMatch && imgMatch[1]) {
+            botMsg.innerHTML = `<div class='bg-white border border-indigo-100 text-gray-800 rounded-xl px-4 py-2 max-w-[80%] shadow font-mono overflow-x-auto prose prose-sm prose-indigo break-words' style='white-space:pre-wrap;'><img src='${imgMatch[1]}' alt='Generated Image' class='rounded-xl max-h-64 my-2 mx-auto border border-indigo-200 shadow'/><div class='text-xs text-gray-400'>[Image generated]</div></div>`;
+          } else if (isLikelyImage && resp.startsWith('data:image')) {
+            botMsg.innerHTML = `<div class='bg-white border border-indigo-100 text-gray-800 rounded-xl px-4 py-2 max-w-[80%] shadow font-mono overflow-x-auto prose prose-sm prose-indigo break-words' style='white-space:pre-wrap;'><img src='${resp}' alt='Generated Image' class='rounded-xl max-h-64 my-2 mx-auto border border-indigo-200 shadow'/><div class='text-xs text-gray-400'>[Image generated]</div></div>`;
+          } else {
+            botMsg.innerHTML = `<div class='bg-white border border-indigo-100 text-gray-800 rounded-xl px-4 py-2 max-w-[80%] shadow font-mono overflow-x-auto prose prose-sm prose-indigo break-words' style='white-space:pre-wrap;'>${formatLLMResponse(resp)}
+              <button class='ml-2 text-indigo-400 hover:text-indigo-600 text-xs underline copyBtn' data-response="${encodeURIComponent(resp||'')}">Copy</button></div>`;
+          }
+          chatArea.appendChild(botMsg);
+        });
+        // Copy to clipboard for chat
+        chatArea.querySelectorAll('.copyBtn').forEach(btn => {
+          btn.onclick = (e) => {
+            e.preventDefault();
+            navigator.clipboard.writeText(decodeURIComponent(btn.getAttribute('data-response')));
+          };
+        });
+      }
+
+      // --- Prompt submit: handle image generation for OpenAI DALL-E ---
+      promptForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorBox.textContent = '';
+        const provider = providerSelect.value;
+        const model = modelInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
+        const prompt = promptInput.value.trim();
+        if (!provider || !model || !apiKey || !prompt) {
+          errorBox.textContent = 'Please fill in all fields.';
+          return;
+        }
+        // Find or create session
+        let session = sessions.find(s => s.id === activeSessionId);
+        if (!session) {
+          // Create new session if none active
+          const sessionId = makeSessionId(provider, model, apiKey + Date.now());
+          session = {
+            id: sessionId,
+            provider,
+            model,
+            apiKey,
+            messages: [],
+            created: Date.now(),
+            lastActive: Date.now()
+          };
+          sessions.push(session);
+          activeSessionId = sessionId;
+        }
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4"></path></svg> Sending...';
+        let url = '', headers = {}, body = {}, method = 'POST', isImage = isImagePrompt(prompt, provider, model);
+        try {
+          let output = '';
+          if (provider === 'openai' && isImage) {
+            // OpenAI DALL-E endpoint
+            url = 'https://api.openai.com/v1/images/generations';
+            headers = {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            };
+            body = {
+              prompt,
+              n: 1,
+              size: '512x512',
+              response_format: 'url' // or 'b64_json' for base64
+            };
+            const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
+            if (!res.ok) {
+              let err = await res.text();
+              throw new Error(`API Error: ${res.status} - ${err}`);
+            }
+            const data = await res.json();
+            if (data.data && data.data[0] && data.data[0].url) {
+              output = data.data[0].url;
+            } else if (data.data && data.data[0] && data.data[0].b64_json) {
+              output = 'data:image/png;base64,' + data.data[0].b64_json;
+            } else {
+              output = '[No image generated]';
+            }
+          } else {
+            // Text LLM or non-image
+            let apiUrl = '', apiHeaders = {}, apiBody = {};
+            if (provider === 'openai') {
+              apiUrl = 'https://api.openai.com/v1/chat/completions';
+              apiHeaders = {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              };
+              apiBody = {
+                model,
+                messages: [{ role: 'user', content: prompt }]
+              };
+            } else if (provider === 'gemini') {
+              apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+              apiHeaders = {
+                'Content-Type': 'application/json'
+              };
+              apiBody = {
+                contents: [
+                  {
+                    parts: [ { text: prompt } ]
+                  }
+                ]
+              };
+            } else if (provider === 'openrouter') {
+              apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+              apiHeaders = {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              };
+              apiBody = {
+                model,
+                messages: [{ role: 'user', content: prompt }]
+              };
+            }
+            const res = await fetch(apiUrl, {
+              method,
+              headers: apiHeaders,
+              body: JSON.stringify(apiBody)
+            });
+            if (!res.ok) {
+              let err = await res.text();
+              throw new Error(`API Error: ${res.status} - ${err}`);
+            }
+            const data = await res.json();
+            if (provider === 'openai' || provider === 'openrouter') {
+              output = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content.trim() : '[No response]';
+            } else if (provider === 'gemini') {
+              output = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text ? data.candidates[0].content.parts[0].text.trim() : '[No response]';
+            }
+          }
+          // Add to session messages
+          session.messages.push({prompt, response: output, ts: Date.now()});
+          session.lastActive = Date.now();
+          saveSessions(sessions);
+          renderSessionHistory();
+          renderChat(session.messages);
+          promptInput.value = '';
+          updateTokenCount();
+        } catch (err) {
+          errorBox.textContent = err.message || 'Unknown error.';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Send';
+        }
+      });
+
+      // 5. Add keyboard shortcut (Ctrl+Enter/Cmd+Enter) to submit prompt
+      promptInput.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          promptForm.requestSubmit();
+        }
+      });
+
+      // On load, show most recent session
+      function showMostRecentSession() {
+        if (!sessions.length) {
+          chatArea.innerHTML = '<div class="text-gray-400 text-center mt-8">No conversation yet.</div>';
+          return;
+        }
+        // Find most recent session
+        let last = sessions.reduce((a,b)=>a.lastActive>b.lastActive?a:b);
+        activeSessionId = last.id;
+        renderChat(last.messages);
+      }
+      renderSessionHistory();
+      showMostRecentSession();
+    });
+
+    // Format LLM response for user-friendly display
+    function formatLLMResponse(text) {
+      if (!text) return '<span class="text-gray-400">No response</span>';
+      // Markdown-like code block support
+      text = escapeHTML(text)
+        .replace(/```([a-zA-Z0-9]*)\n([\s\S]*?)```/g, function(_, lang, code) {
+          return `<pre class='bg-gray-100 rounded p-2 my-2 overflow-x-auto'><code class='text-xs'>${escapeHTML(code)}</code></pre>`;
+        })
+        .replace(/`([^`]+)`/g, '<code class="bg-gray-100 rounded px-1">$1</code>');
+      // Lists
+      text = text.replace(/\n([-*]) (.+)/g, '<br><span class="pl-4">$1 $2</span>');
+      // Bold/italic
+      text = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+      text = text.replace(/\*(.*?)\*/g, '<i>$1</i>');
+      // Links
+      text = text.replace(/(https?:\/\/\S+)/g, '<a href="$1" class="text-indigo-500 underline" target="_blank">$1</a>');
+      // Newlines
+      text = text.replace(/\n/g, '<br>');
+      return text;
+    }
+    // Escape HTML utility
+    function escapeHTML(str) {
+      return str?.replace(/[&<>"']/g, function(tag) {
+        const chars = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'};
+        return chars[tag] || tag;
+      });
+    }
+  </script>
+</body>
+</html>
